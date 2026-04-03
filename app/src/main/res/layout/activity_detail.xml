@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Badge "modification locale en attente" -->
+    <TextView
+        android:id="@+id/tvDirty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⚠ Modification locale non synchronisée"
+        android:textColor="#E65100"
+        android:textSize="13sp"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
+
+    <!-- Champ Nom -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nom du club"
+        android:textSize="12sp"
+        android:textColor="#757575" />
+
+    <EditText
+        android:id="@+id/etNom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:enabled="false"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Champ Ville -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ville"
+        android:textSize="12sp"
+        android:textColor="#757575" />
+
+    <EditText
+        android:id="@+id/etVille"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPostalAddress"
+        android:enabled="false"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Barre de progression -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:visibility="gone" />
+
+    <!-- Boutons -->
+    <Button
+        android:id="@+id/btnEdit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Modifier"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enregistrer"
+        android:visibility="gone" />
+
+</LinearLayout>
