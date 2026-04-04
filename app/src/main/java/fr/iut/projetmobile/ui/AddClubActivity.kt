@@ -26,7 +26,7 @@ class AddClubActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_club)
 
-        supportActionBar?.title = "Nouveau club"
+        supportActionBar?.title = getString(R.string.title_new_club)
 
         repository = ClubRepository(this)
         etNom = findViewById(R.id.etNom)
@@ -44,11 +44,11 @@ class AddClubActivity : AppCompatActivity() {
         val ville = etVille.text.toString().trim()
 
         if (nom.isEmpty()) {
-            etNom.error = "Champ requis"
+            etNom.error = getString(R.string.error_required)
             return
         }
         if (ville.isEmpty()) {
-            etVille.error = "Champ requis"
+            etVille.error = getString(R.string.error_required)
             return
         }
 

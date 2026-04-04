@@ -44,12 +44,12 @@ class DetailActivity : AppCompatActivity() {
 
         val clubId = intent.getIntExtra(EXTRA_CLUB_ID, Int.MIN_VALUE)
         if (clubId == Int.MIN_VALUE) {
-            Log.w("DetailActivity", "EXTRA_CLUB_ID manquant")
+            Log.w("DetailActivity", getString(R.string.error_missing_club_id))
             finish()
             return
         }
 
-        supportActionBar?.title = "Détail du club"
+        supportActionBar?.title = getString(R.string.title_detail_club)
         setEditMode(false)
         loadClub(clubId)
         btnEdit.setOnClickListener { setEditMode(true) }
@@ -93,8 +93,8 @@ class DetailActivity : AppCompatActivity() {
         val nom   = etNom.text.toString().trim()
         val ville = etVille.text.toString().trim()
 
-        if (nom.isEmpty()) { etNom.error   = "Champ requis"; return }
-        if (ville.isEmpty()) { etVille.error = "Champ requis"; return }
+        if (nom.isEmpty()) { etNom.error   = getString(R.string.error_required); return }
+        if (ville.isEmpty()) { etVille.error = getString(R.string.error_required); return }
 
         val id = currentClub?.id ?: run {
             Log.w("DetailActivity", "Tentative de sauvegarde sans club chargé")
