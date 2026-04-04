@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="main_status_loading">Loading…</string>
+    <string name="main_sync">Sync</string>
+    <string name="main_add">Add</string>
+    <string name="detail_dirty">⚠ Local changes not synchronized</string>
+    <string name="detail_nom">Club name</string>
+    <string name="detail_ville">City</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_save">Save</string>
+    <string name="detail_back_to_list">Back</string>
+    <string name="title_new_club">New club</string>
+    <string name="title_detail_club">Club details</string>
+    <string name="error_required">Field required</string>
+    <string name="error_missing_club_id">Missing club ID</string>
+    <string name="add_nom">Club name</string>
+    <string name="add_ville">City</string>
+    <string name="add_save">Save</string>
+    <string name="hint_nom">Enter the club name</string>
+    <string name="hint_ville">Enter the city</string>
+</resources>
+

@@ -22,6 +22,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var etVille : EditText
     private lateinit var btnEdit : Button
     private lateinit var btnSave : Button
+    private lateinit var btnBack : Button
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
 
@@ -37,6 +38,7 @@ class DetailActivity : AppCompatActivity() {
         etVille      = findViewById(R.id.etVille)
         btnEdit      = findViewById(R.id.btnEdit)
         btnSave      = findViewById(R.id.btnSave)
+        btnBack      = findViewById(R.id.btnBack)
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
 
@@ -53,6 +55,7 @@ class DetailActivity : AppCompatActivity() {
         btnEdit.setOnClickListener { setEditMode(true) }
 
         btnSave.setOnClickListener { saveClub() }
+        btnBack.setOnClickListener { finish() }
     }
 
     private fun loadClub(id: Int) {

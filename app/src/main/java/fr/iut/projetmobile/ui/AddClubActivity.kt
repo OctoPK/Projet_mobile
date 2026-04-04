@@ -19,6 +19,7 @@ class AddClubActivity : AppCompatActivity() {
     private lateinit var etNom: EditText
     private lateinit var etVille: EditText
     private lateinit var btnSave: Button
+    private lateinit var btnBack: Button
     private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,9 +32,11 @@ class AddClubActivity : AppCompatActivity() {
         etNom = findViewById(R.id.etNom)
         etVille = findViewById(R.id.etVille)
         btnSave = findViewById(R.id.btnSave)
+        btnBack = findViewById(R.id.btnBack)
         progressBar = findViewById(R.id.progressBar)
 
         btnSave.setOnClickListener { saveClub() }
+        btnBack.setOnClickListener { finish() }
     }
 
     private fun saveClub() {
