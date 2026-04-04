@@ -14,7 +14,6 @@ class DetailActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_CLUB_ID = "club_id"
-        const val MODE_CREATE   = -1
     }
 
     private lateinit var repository: ClubRepository
@@ -41,17 +40,17 @@ class DetailActivity : AppCompatActivity() {
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
 
-        val clubId = intent.getIntExtra(EXTRA_CLUB_ID, MODE_CREATE)
-
-        if (clubId == MODE_CREATE) {
-            supportActionBar?.title = "Nouveau club"
-            setEditMode(true)
-            btnEdit.visibility = View.GONE
-        } else {
-            supportActionBar?.title = "Détail du club"
-            loadClub(clubId)
-            btnEdit.setOnClickListener { setEditMode(true) }
+        val clubId = intent.getIntExtra(EXTRA_CLUB_ID, Int.MIN_VALUE)
+        if (clubId == Int.MIN_VALUE) {
+            Log.w("DetailActivity", "EXTRA_CLUB_ID manquant")
+            finish()
+            return
         }
+
+        supportActionBar?.title = "Détail du club"
+        setEditMode(false)
+        loadClub(clubId)
+        btnEdit.setOnClickListener { setEditMode(true) }
 
         btnSave.setOnClickListener { saveClub() }
     }
@@ -94,7 +93,10 @@ class DetailActivity : AppCompatActivity() {
         if (nom.isEmpty()) { etNom.error   = "Champ requis"; return }
         if (ville.isEmpty()) { etVille.error = "Champ requis"; return }
 
-        val id = currentClub?.id ?: MODE_CREATE
+        val id = currentClub?.id ?: run {
+            Log.w("DetailActivity", "Tentative de sauvegarde sans club chargé")
+            return
+        }
 
         val updatedClub = Club(
             id      = id,
