@@ -18,5 +18,15 @@
     <string name="add_save">Save</string>
     <string name="hint_nom">Enter the club name</string>
     <string name="hint_ville">Enter the city</string>
-</resources>
 
+    <string name="login_dialog_title">Sign in</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_action_sign_in">Sign in</string>
+    <string name="login_action_cancel">Cancel</string>
+    <string name="login_success">Signed in successfully</string>
+    <string name="login_failed">Sign in failed</string>
+    <string name="login_email_required">Email is required</string>
+    <string name="login_email_invalid">Invalid email address</string>
+    <string name="login_password_required">Password is required</string>
+</resources>

@@ -22,4 +22,15 @@
     <string name="main_sync">Synchronisation</string>
     <string name="title_detail_club">Détail</string>
     <string name="title_new_club">Nouveau</string>
+
+    <string name="login_dialog_title">Connexion</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Mot de passe</string>
+    <string name="login_action_sign_in">Se connecter</string>
+    <string name="login_action_cancel">Annuler</string>
+    <string name="login_success">Connexion reussie</string>
+    <string name="login_failed">Echec de la connexion</string>
+    <string name="login_email_required">Email requis</string>
+    <string name="login_email_invalid">Email invalide</string>
+    <string name="login_password_required">Mot de passe requis</string>
 </resources>

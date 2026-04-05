@@ -1,6 +1,7 @@
 ﻿package fr.iut.projetmobile.ui
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -8,17 +9,21 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
+import fr.iut.projetmobile.network.ApiClient
 import fr.iut.projetmobile.repository.ClubRepository
+import org.json.JSONObject
 import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
 
@@ -90,25 +95,8 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val isFirstStart = prefs.getBoolean("isFirstStart", true)
 
-        //Toast de connexion au premier démarrage (Appel API vers /api/login)
         if (isFirstStart) {
-            // TODO: Prépare ici l'appel vers fr.iut.projetmobile.network.ApiClient.login(credentialsJson) avec les données.
-            // Utilise thread { val success = ApiClient.login(...) ; runOnUiThread { Toast.makeText(...) } }
-            // Voici la base d'un appel :
-            /*
-            thread {
-                val myJsonCredentials = """{"email":"test@test.com", "password":"password"}"""
-                val isLogged = fr.iut.projetmobile.network.ApiClient.login(myJsonCredentials)
-                runOnUiThread {
-                    if (isLogged) {
-                        // Toast(...) : Connexion réussie !
-                    } else {
-                        // Toast(...) : Échec de la connexion
-                    }
-                }
-            }
-            */
-            prefs.edit().putBoolean("isFirstStart", false).apply()
+            showFirstLoginDialog(prefs)
         }
 
         // Configure NavHeader
@@ -161,6 +149,84 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
+    }
+
+    private fun showFirstLoginDialog(prefs: SharedPreferences) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_login, null)
+        val etEmail = dialogView.findViewById<EditText>(R.id.etLoginEmail)
+        val etPassword = dialogView.findViewById<EditText>(R.id.etLoginPassword)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.login_dialog_title)
+            .setView(dialogView)
+            .setCancelable(false)
+            .setPositiveButton(R.string.login_action_sign_in, null)
+            .setNegativeButton(R.string.login_action_cancel) { _, _ ->
+                finish()
+            }
+            .create()
+
+        dialog.setOnShowListener {
+            val btnSignIn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val btnCancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+
+            btnSignIn.setOnClickListener {
+                val email = etEmail.text?.toString()?.trim().orEmpty()
+                val password = etPassword.text?.toString().orEmpty()
+
+                when {
+                    email.isEmpty() -> {
+                        etEmail.error = getString(R.string.login_email_required)
+                        etEmail.requestFocus()
+                        return@setOnClickListener
+                    }
+                    !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                        etEmail.error = getString(R.string.login_email_invalid)
+                        etEmail.requestFocus()
+                        return@setOnClickListener
+                    }
+                    password.isEmpty() -> {
+                        etPassword.error = getString(R.string.login_password_required)
+                        etPassword.requestFocus()
+                        return@setOnClickListener
+                    }
+                }
+
+                etEmail.error = null
+                etPassword.error = null
+                btnSignIn.isEnabled = false
+                btnCancel.isEnabled = false
+
+                thread {
+                    val credentialsJson = JSONObject()
+                        .put("email", email)
+                        .put("password", password)
+                        .toString()
+
+                    val isLogged = try {
+                        ApiClient.login(credentialsJson)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Login failed", e)
+                        false
+                    }
+
+                    runOnUiThread {
+                        btnSignIn.isEnabled = true
+                        btnCancel.isEnabled = true
+
+                        if (isLogged) {
+                            prefs.edit().putBoolean("isFirstStart", false).apply()
+                            Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                        } else {
+                            Toast.makeText(this, getString(R.string.login_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     private fun isNetworkAvailable(): Boolean {
