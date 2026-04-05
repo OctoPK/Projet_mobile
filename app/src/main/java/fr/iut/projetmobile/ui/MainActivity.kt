@@ -13,12 +13,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.repository.ClubRepository
+import org.json.JSONObject
 import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
 
@@ -87,29 +89,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        val isFirstStart = prefs.getBoolean("isFirstStart", true)
-
-        //Toast de connexion au premier démarrage (Appel API vers /api/login)
-        if (isFirstStart) {
-            // TODO: Prépare ici l'appel vers fr.iut.projetmobile.network.ApiClient.login(credentialsJson) avec les données.
-            // Utilise thread { val success = ApiClient.login(...) ; runOnUiThread { Toast.makeText(...) } }
-            // Voici la base d'un appel :
-            /*
-            thread {
-                val myJsonCredentials = """{"email":"test@test.com", "password":"password"}"""
-                val isLogged = fr.iut.projetmobile.network.ApiClient.login(myJsonCredentials)
-                runOnUiThread {
-                    if (isLogged) {
-                        // Toast(...) : Connexion réussie !
-                    } else {
-                        // Toast(...) : Échec de la connexion
-                    }
-                }
-            }
-            */
-            prefs.edit().putBoolean("isFirstStart", false).apply()
-        }
 
         // Configure NavHeader
         findViewById<TextView>(R.id.tvNavTitle).text = "Clubs"
@@ -161,6 +140,34 @@ class MainActivity : AppCompatActivity() {
             }
             popup.show()
         }
+    }
+
+    private fun showLoginDialog() {
+        // TODO Implémenter la popup de connexion.
+        //
+        // --- UTILISATION DE L'API ---
+        // Endpoint : POST /api/login
+        //
+        // . Formate les chaînes dans un objet JSON :
+        //    val json = JSONObject().apply { put("email", tonEmail); put("password", tonPassword) }.toString()
+        //
+        // . Lance la requête asynchrone (ex: via un thread en arrière-plan) :
+        //    thread {
+        //        val isLogged = fr.iut.projetmobile.network.ApiClient.login(json)
+        //        runOnUiThread {
+        //            if (isLogged) {
+        //                // Connexion réussie (Code API 200)
+        //                getSharedPreferences("AppPrefs", Context.MODE_PRIVATE).edit().putBoolean("isLoggedIn", true).apply()
+        //                // Affiche un Toast de confirmation, cache ton AlertDialog
+        //            } else {
+        //                // Échec de la connexion (Code 401)
+        //                // Affiche un Toast d'erreur
+        //            }
+        //        }
+        //    }
+        //
+        // Aide-toi de fr.iut.projetmobile.network.ApiClient.login() que j'ai préparé.
+        Toast.makeText(this, "Popup de connexion à créer par le partenaire !", Toast.LENGTH_LONG).show()
     }
 
     private fun isNetworkAvailable(): Boolean {
