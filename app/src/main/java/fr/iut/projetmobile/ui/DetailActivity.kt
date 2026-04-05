@@ -14,7 +14,6 @@ class DetailActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_CLUB_ID = "club_id"
-        const val MODE_CREATE   = -1
     }
 
     private lateinit var repository: ClubRepository
@@ -23,6 +22,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var etVille : EditText
     private lateinit var btnEdit : Button
     private lateinit var btnSave : Button
+    private lateinit var btnBack : Button
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
 
@@ -38,22 +38,24 @@ class DetailActivity : AppCompatActivity() {
         etVille      = findViewById(R.id.etVille)
         btnEdit      = findViewById(R.id.btnEdit)
         btnSave      = findViewById(R.id.btnSave)
+        btnBack      = findViewById(R.id.btnBack)
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
 
-        val clubId = intent.getIntExtra(EXTRA_CLUB_ID, MODE_CREATE)
-
-        if (clubId == MODE_CREATE) {
-            supportActionBar?.title = "Nouveau club"
-            setEditMode(true)
-            btnEdit.visibility = View.GONE
-        } else {
-            supportActionBar?.title = "Détail du club"
-            loadClub(clubId)
-            btnEdit.setOnClickListener { setEditMode(true) }
+        val clubId = intent.getIntExtra(EXTRA_CLUB_ID, Int.MIN_VALUE)
+        if (clubId == Int.MIN_VALUE) {
+            Log.w("DetailActivity", getString(R.string.error_missing_club_id))
+            finish()
+            return
         }
 
+        supportActionBar?.title = getString(R.string.title_detail_club)
+        setEditMode(false)
+        loadClub(clubId)
+        btnEdit.setOnClickListener { setEditMode(true) }
+
         btnSave.setOnClickListener { saveClub() }
+        btnBack.setOnClickListener { finish() }
     }
 
     private fun loadClub(id: Int) {
@@ -91,10 +93,13 @@ class DetailActivity : AppCompatActivity() {
         val nom   = etNom.text.toString().trim()
         val ville = etVille.text.toString().trim()
 
-        if (nom.isEmpty()) { etNom.error   = "Champ requis"; return }
-        if (ville.isEmpty()) { etVille.error = "Champ requis"; return }
+        if (nom.isEmpty()) { etNom.error   = getString(R.string.error_required); return }
+        if (ville.isEmpty()) { etVille.error = getString(R.string.error_required); return }
 
-        val id = currentClub?.id ?: MODE_CREATE
+        val id = currentClub?.id ?: run {
+            Log.w("DetailActivity", "Tentative de sauvegarde sans club chargé")
+            return
+        }
 
         val updatedClub = Club(
             id      = id,

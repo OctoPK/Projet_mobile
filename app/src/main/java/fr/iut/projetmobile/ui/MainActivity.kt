@@ -67,8 +67,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         fab.setOnClickListener {
-            val intent = Intent(this, DetailActivity::class.java)
-            intent.putExtra(DetailActivity.EXTRA_CLUB_ID, DetailActivity.MODE_CREATE)
+            val intent = Intent(this, AddClubActivity::class.java)
             detailLauncher.launch(intent)
         }
     }
