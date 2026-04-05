@@ -252,10 +252,15 @@ class MainActivity : AppCompatActivity() {
             val tvCity = view.findViewById<TextView>(R.id.tvClubCity)
             val tvState = view.findViewById<TextView>(R.id.tvClubState)
             val btnViewDetails = view.findViewById<Button>(R.id.btnViewDetails)
+            val tvMemberCount = view.findViewById<TextView>(R.id.tvMemberCount)
+
             tvName.text = club.nom
             val cityText = if (!club.codePostal.isNullOrEmpty()) "${club.ville} ${club.codePostal}" else club.ville
             tvCity.text = cityText
             tvState.text = if (club.isApproved) "Approuvé" else "En attente"
+
+            tvMemberCount.text = "${club.memberCount} membre(s)"
+
             if (club.isDirty) {
                 tvState.text = "Modifié localement"
                 tvState.setTextColor(android.graphics.Color.parseColor("#E65100"))

@@ -29,5 +29,8 @@ data class Club(
     @ColumnInfo(name = "is_approved")
     val isApproved: Boolean = false,
 
+    @ColumnInfo(name = "member_count")
+    val memberCount: Int = 0,
+
     val isDirty: Boolean = false  // true = modifié localement, à synchroniser
 )

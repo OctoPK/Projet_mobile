@@ -64,7 +64,8 @@ object ClubParser {
         rue        = obj.optString("club_street", ""),
         ville      = obj.optString("club_city", obj.optString("ville", "")),
         codePostal = obj.optString("club_postal_code", ""),
-        isApproved = obj.optBoolean("is_approved", false)
+        isApproved = obj.optBoolean("is_approved", false),
+        memberCount = obj.optJSONArray("members")?.length() ?: 0
     )
 
     fun clubToJson(club: Club): String {
