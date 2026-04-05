@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +21,52 @@ import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.repository.ClubRepository
 import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
+
+    interface NetworkState {
+        fun handle(context: MainActivity)
+    }
+
+    object DisconnectedState : NetworkState {
+        override fun handle(context: MainActivity) {
+            context.runOnUiThread {
+                context.ivNetworkStatus.setImageResource(R.drawable.ic_circle_red)
+            }
+        }
+    }
+
+    object ConnectedNoApiState : NetworkState {
+        override fun handle(context: MainActivity) {
+            context.runOnUiThread {
+                context.ivNetworkStatus.setImageResource(R.drawable.ic_circle_orange)
+            }
+        }
+    }
+
+    object ConnectedApiState : NetworkState {
+        override fun handle(context: MainActivity) {
+            context.runOnUiThread {
+                context.ivNetworkStatus.setImageResource(R.drawable.ic_circle_green)
+            }
+        }
+    }
+
+    private var currentNetworkState: NetworkState = DisconnectedState
+
+    private val retryHandler = Handler(Looper.getMainLooper())
+    private val retryRunnable = Runnable {
+        if (currentNetworkState == ConnectedNoApiState) {
+            performSync()
+        }
+    }
+
+    fun setNetworkState(state: NetworkState) {
+        currentNetworkState = state
+        state.handle(this)
+        if (state == ConnectedApiState || state == DisconnectedState) {
+            retryHandler.removeCallbacks(retryRunnable)
+        }
+    }
+
     private lateinit var repository: ClubRepository
     private lateinit var listView: ListView
     private lateinit var ivNetworkStatus: ImageView
@@ -108,15 +156,11 @@ class MainActivity : AppCompatActivity() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                runOnUiThread {
-                    ivNetworkStatus.setImageResource(android.R.drawable.presence_online)
-                }
+                setNetworkState(ConnectedNoApiState)
                 performSync()
             }
             override fun onLost(network: Network) {
-                runOnUiThread {
-                    ivNetworkStatus.setImageResource(android.R.drawable.presence_offline)
-                }
+                setNetworkState(DisconnectedState)
             }
         }
         val req = android.net.NetworkRequest.Builder()
@@ -124,10 +168,10 @@ class MainActivity : AppCompatActivity() {
             .build()
         cm.registerNetworkCallback(req, networkCallback!!)
         if (isNetworkAvailable()) {
-            ivNetworkStatus.setImageResource(android.R.drawable.presence_online)
+            setNetworkState(ConnectedNoApiState)
             performSync()
         } else {
-            ivNetworkStatus.setImageResource(android.R.drawable.presence_offline)
+            setNetworkState(DisconnectedState)
         }
     }
     private fun performSync() {
@@ -141,10 +185,14 @@ class MainActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 if (success) {
+                    setNetworkState(ConnectedApiState)
                     tvStatus.text = "Synchronisé"
                     loadList()
                 } else {
-                    tvStatus.text = "Échec de synchronisation"
+                    setNetworkState(ConnectedNoApiState)
+                    tvStatus.text = "Échec API (nouvelle tentative dans 10s...)"
+                    retryHandler.removeCallbacks(retryRunnable)
+                    retryHandler.postDelayed(retryRunnable, 10000)
                 }
             }
         }
@@ -185,7 +233,7 @@ class MainActivity : AppCompatActivity() {
             tvCity.text = cityText
             tvState.text = if (club.isApproved) "Approuvé" else "En attente"
             if (club.isDirty) {
-                tvState.text = "Modifié localement 👀"
+                tvState.text = "Modifié localement"
                 tvState.setTextColor(android.graphics.Color.parseColor("#E65100"))
             } else if (!club.isApproved) {
                 tvState.setTextColor(android.graphics.Color.parseColor("#1976D2"))

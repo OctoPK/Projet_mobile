@@ -16,26 +16,25 @@ import java.net.URL
  */
 object ApiClient {
 
-    // ⚠️ Remplacez par l'IP/URL de votre serveur (ex: émulateur → 10.0.2.2)
-    private const val BASE_URL = "http://localhost:8080/api"
+    private const val BASE_URL = "http://192.168.1.16:8080/api"
     private const val TIMEOUT_MS = 5000
 
     // ------------------------------------------------------------------ GET
     /**
      * Récupère tous les clubs depuis le serveur.
-     * Retourne une liste vide en cas d'erreur réseau.
+     * Lance une exception en cas d'erreur de connexion ou HTTP.
      */
+    @Throws(Exception::class)
     fun getClubs(): List<Club> {
-        val connection = openConnection("$BASE_URL/clubs/", "GET") ?: return emptyList()
+        val connection = openConnection("$BASE_URL/clubs", "GET") ?: throw Exception("Connection failed")
         return try {
             val code = connection.responseCode
             if (code == HttpURLConnection.HTTP_OK) {
                 val body = connection.inputStream.bufferedReader().readText()
                 parseClubList(body)
-            } else emptyList()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
+            } else {
+                throw Exception("HTTP Error: $code")
+            }
         } finally {
             connection.disconnect()
         }
@@ -102,7 +101,12 @@ object ApiClient {
 
     private fun parseClubList(json: String): List<Club> {
         val clubs = mutableListOf<Club>()
-        val array = JSONArray(json)
+        val array = try {
+            JSONArray(json)
+        } catch (e: Exception) {
+            // Might be a paginated response: { "data": [...] }
+            JSONObject(json).getJSONArray("data")
+        }
         for (i in 0 until array.length()) {
             clubs.add(parseClub(array.getJSONObject(i)))
         }

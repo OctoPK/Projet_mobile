@@ -55,11 +55,12 @@ class ClubRepository(private val context: Context) {
         }
 
         // Étape 2 : pull de la liste complète
+        // Lance une exception si l'API est inaccessible
         val remote = ApiClient.getClubs()
-        if (remote.isNotEmpty()) {
-            dao.deleteAll()
-            dao.insertAll(remote)
-        }
+
+        // Si la récupération réussit, on met à jour la base locale
+        dao.deleteAll()
+        dao.insertAll(remote)
 
         return true
     }
