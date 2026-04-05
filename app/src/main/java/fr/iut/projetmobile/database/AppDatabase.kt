@@ -6,7 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import fr.iut.projetmobile.model.Club
 
-@Database(entities = [Club::class], version = 1, exportSchema = false)
+@Database(entities = [Club::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clubDao(): ClubDao
@@ -21,7 +21,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "projetmobile.db"
-                ).build().also { INSTANCE = it }
+                )
+                .fallbackToDestructiveMigration()
+                .build().also { INSTANCE = it }
             }
         }
     }

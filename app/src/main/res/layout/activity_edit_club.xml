@@ -40,7 +40,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:autofillHints="name"
-        android:enabled="false"
         android:inputType="textPersonName"
         android:hint="@string/detail_nom"
         app:layout_constraintEnd_toEndOf="parent"
@@ -62,7 +61,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:autofillHints="postalAddress"
-        android:enabled="false"
         android:inputType="textPostalAddress"
         android:hint="@string/detail_ville"
         app:layout_constraintEnd_toEndOf="parent"
@@ -78,30 +76,12 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/etVille" />
     <Button
-        android:id="@+id/btnEdit"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:text="@string/detail_edit"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/progressBar" />
-    <Button
-        android:id="@+id/btnBack"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/detail_back_to_list"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnEdit" />
-    <Button
         android:id="@+id/btnSave"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
         android:text="@string/detail_save"
-        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnBack" />
+        app:layout_constraintTop_toBottomOf="@id/progressBar" />
 </androidx.constraintlayout.widget.ConstraintLayout>

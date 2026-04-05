@@ -1,34 +1,31 @@
-package fr.iut.projetmobile.ui
-
+﻿package fr.iut.projetmobile.ui
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.*
-import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.repository.ClubRepository
 import kotlin.concurrent.thread
-
 class DetailActivity : AppCompatActivity() {
-
     companion object {
         const val EXTRA_CLUB_ID = "club_id"
     }
-
     private lateinit var repository: ClubRepository
-
     private lateinit var etNom   : EditText
     private lateinit var etVille : EditText
     private lateinit var btnEdit : Button
-    private lateinit var btnSave : Button
     private lateinit var btnBack : Button
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
-
-    private var currentClub: Club? = null
-    private var isEditMode = false
-
+    private var clubId: Int = -1
+    private val editLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) loadClub(clubId)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
@@ -37,27 +34,28 @@ class DetailActivity : AppCompatActivity() {
         etNom        = findViewById(R.id.etNom)
         etVille      = findViewById(R.id.etVille)
         btnEdit      = findViewById(R.id.btnEdit)
-        btnSave      = findViewById(R.id.btnSave)
         btnBack      = findViewById(R.id.btnBack)
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
 
-        val clubId = intent.getIntExtra(EXTRA_CLUB_ID, Int.MIN_VALUE)
-        if (clubId == Int.MIN_VALUE) {
-            Log.w("DetailActivity", getString(R.string.error_missing_club_id))
-            finish()
-            return
-        }
+        findViewById<Button>(R.id.btnSave)?.visibility = View.GONE
 
-        supportActionBar?.title = getString(R.string.title_detail_club)
-        setEditMode(false)
+        clubId = intent.getIntExtra(EXTRA_CLUB_ID, -1)
+
+        findViewById<TextView>(R.id.tvNavTitle).text = "Détail du club"
+
+        btnEdit.visibility = View.VISIBLE
+        etNom.isEnabled = false
+        etVille.isEnabled = false
+
         loadClub(clubId)
-        btnEdit.setOnClickListener { setEditMode(true) }
 
-        btnSave.setOnClickListener { saveClub() }
-        btnBack.setOnClickListener { finish() }
+        btnEdit.setOnClickListener {
+            val intent = Intent(this, EditClubActivity::class.java)
+            intent.putExtra(EditClubActivity.EXTRA_CLUB_ID, clubId)
+            editLauncher.launch(intent)
+        }
     }
-
     private fun loadClub(id: Int) {
         progressBar.visibility = View.VISIBLE
         thread {
@@ -65,63 +63,16 @@ class DetailActivity : AppCompatActivity() {
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 if (club == null) {
-                    Log.w("DetailActivity", "Club introuvable: id=$id")
                     finish()
                     return@runOnUiThread
                 }
-                currentClub = club
                 displayClub(club)
             }
         }
     }
-
     private fun displayClub(club: Club) {
         etNom.setText(club.nom)
         etVille.setText(club.ville)
         tvDirty.visibility = if (club.isDirty) View.VISIBLE else View.GONE
-    }
-
-    private fun setEditMode(enabled: Boolean) {
-        isEditMode = enabled
-        etNom.isEnabled   = enabled
-        etVille.isEnabled = enabled
-        btnEdit.visibility = if (enabled) View.GONE else View.VISIBLE
-        btnSave.visibility = if (enabled) View.VISIBLE else View.GONE
-    }
-
-    private fun saveClub() {
-        val nom   = etNom.text.toString().trim()
-        val ville = etVille.text.toString().trim()
-
-        if (nom.isEmpty()) { etNom.error   = getString(R.string.error_required); return }
-        if (ville.isEmpty()) { etVille.error = getString(R.string.error_required); return }
-
-        val id = currentClub?.id ?: run {
-            Log.w("DetailActivity", "Tentative de sauvegarde sans club chargé")
-            return
-        }
-
-        val updatedClub = Club(
-            id      = id,
-            nom     = nom,
-            ville   = ville,
-            isDirty = true
-        )
-
-        progressBar.visibility = View.VISIBLE
-        thread {
-            try {
-                repository.saveLocally(updatedClub)
-                runOnUiThread {
-                    progressBar.visibility = View.GONE
-                    Log.i("DetailActivity", "Saved locally: id=${updatedClub.id}")
-                    setResult(RESULT_OK)
-                    finish()
-                }
-            } catch (e: Exception) {
-                Log.e("DetailActivity", "Save failed", e)
-                runOnUiThread { progressBar.visibility = View.GONE }
-            }
-        }
     }
 }

@@ -17,7 +17,7 @@ import java.net.URL
 object ApiClient {
 
     // ⚠️ Remplacez par l'IP/URL de votre serveur (ex: émulateur → 10.0.2.2)
-    private const val BASE_URL = "http://10.0.2.2:8000/api"
+    private const val BASE_URL = "http://localhost:8080/api"
     private const val TIMEOUT_MS = 5000
 
     // ------------------------------------------------------------------ GET
