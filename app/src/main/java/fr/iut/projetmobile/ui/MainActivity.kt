@@ -4,6 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.*
 import android.util.Log
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.content.Context
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -16,7 +20,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var repository: ClubRepository
     private lateinit var listView: ListView
-    private lateinit var btnSync: Button
+    private lateinit var ivNetworkStatus: ImageView
     private lateinit var tvStatus: TextView
     private lateinit var fab: FloatingActionButton
 
@@ -25,15 +29,22 @@ class MainActivity : AppCompatActivity() {
     private val detailLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) loadList()
+        if (result.resultCode == RESULT_OK) {
+            loadList()
+            if (isNetworkAvailable()) {
+                performSync()
+            }
+        }
     }
+
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         listView    = findViewById(R.id.listView)
-        btnSync     = findViewById(R.id.btnSync)
+        ivNetworkStatus = findViewById(R.id.ivNetworkStatus)
         tvStatus    = findViewById(R.id.tvStatus)
         fab         = findViewById(R.id.fab)
 
@@ -46,23 +57,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        btnSync.setOnClickListener {
-            tvStatus.text = "Synchronisation…"
-            btnSync.isEnabled = false
-            thread {
-                val success = try {
-                    repository.sync()
-                } catch (e: Exception) {
-                    Log.e("MainActivity", "Sync failed", e)
-                    false
-                }
-                runOnUiThread {
-                    tvStatus.text = if (success) "Synchronisé ✓" else "Hors ligne — données locales"
-                    btnSync.isEnabled = true
-                    loadList()
-                }
-            }
-        }
+        setupNetworkCallback()
 
         listView.setOnItemClickListener { _, _, position, _ ->
             val club = clubs[position]
@@ -75,6 +70,71 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, DetailActivity::class.java)
             intent.putExtra(DetailActivity.EXTRA_CLUB_ID, DetailActivity.MODE_CREATE)
             detailLauncher.launch(intent)
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun setupNetworkCallback() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                runOnUiThread {
+                    ivNetworkStatus.setImageResource(android.R.drawable.presence_online)
+                }
+                performSync()
+            }
+
+            override fun onLost(network: Network) {
+                runOnUiThread {
+                    ivNetworkStatus.setImageResource(android.R.drawable.presence_offline)
+                }
+            }
+        }
+        val req = android.net.NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        cm.registerNetworkCallback(req, networkCallback!!)
+
+        // Initial state
+        if (isNetworkAvailable()) {
+            ivNetworkStatus.setImageResource(android.R.drawable.presence_online)
+            performSync()
+        } else {
+            ivNetworkStatus.setImageResource(android.R.drawable.presence_offline)
+        }
+    }
+
+    private fun performSync() {
+        runOnUiThread { tvStatus.text = "Synchronisation en cours…" }
+        thread {
+            val success = try {
+                repository.sync()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Sync failed", e)
+                false
+            }
+            runOnUiThread {
+                if (success) {
+                    tvStatus.text = "Synchronisé ✓"
+                    loadList()
+                } else {
+                    tvStatus.text = "Échec de synchronisation"
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        networkCallback?.let {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            cm.unregisterNetworkCallback(it)
         }
     }
 

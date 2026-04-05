@@ -19,11 +19,13 @@
             android:textSize="14sp"
             android:paddingBottom="8dp" />
 
-        <Button
-            android:id="@+id/btnSync"
-            android:layout_width="match_parent"
+        <ImageView
+            android:id="@+id/ivNetworkStatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Synchroniser" />
+            android:layout_gravity="end"
+            android:paddingBottom="8dp"
+            android:contentDescription="Statut réseau" />
 
         <ListView
             android:id="@+id/listView"

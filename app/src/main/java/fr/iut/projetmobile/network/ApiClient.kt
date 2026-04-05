@@ -110,15 +110,20 @@ object ApiClient {
     }
 
     private fun parseClub(obj: JSONObject) = Club(
-        id   = obj.getInt("id"),
-        nom  = obj.getString("nom"),
-        ville = obj.getString("ville")
+        id         = obj.optInt("club_id", obj.optInt("id", -1)),
+        nom        = obj.optString("club_name", obj.optString("nom", "")),
+        rue        = obj.optString("club_street", null),
+        ville      = obj.optString("club_city", obj.optString("ville", "")),
+        codePostal = obj.optString("club_postal_code", null),
+        isApproved = obj.optBoolean("is_approved", false)
     )
 
     private fun clubToJson(club: Club): String {
         return JSONObject().apply {
-            put("nom",   club.nom)
-            put("ville", club.ville)
+            put("club_name", club.nom)
+            put("club_city", club.ville)
+            put("club_street", club.rue)
+            put("club_postal_code", club.codePostal)
         }.toString()
     }
 }

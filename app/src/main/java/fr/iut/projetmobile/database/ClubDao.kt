@@ -6,10 +6,10 @@ import fr.iut.projetmobile.model.Club
 @Dao
 interface ClubDao {
 
-    @Query("SELECT * FROM clubs ORDER BY nom ASC")
+    @Query("SELECT * FROM clubs ORDER BY club_name ASC")
     fun getAll(): List<Club>
 
-    @Query("SELECT * FROM clubs WHERE id = :id")
+    @Query("SELECT * FROM clubs WHERE club_id = :id")
     fun getById(id: Int): Club?
 
     @Query("SELECT * FROM clubs WHERE isDirty = 1")
