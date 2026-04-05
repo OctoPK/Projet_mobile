@@ -31,10 +31,30 @@ object ApiClient {
             val code = connection.responseCode
             if (code == HttpURLConnection.HTTP_OK) {
                 val body = connection.inputStream.bufferedReader().readText()
-                parseClubList(body)
+                ClubParser.parseClubList(body)
             } else {
                 throw Exception("HTTP Error: $code")
             }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    // ----------------------------------------------------------------- AUTH
+    /**
+     * Authentification de l'utilisateur (POST /api/login).
+     * @return un token ou true si succès, selon ce que l'API renvoie.
+     */
+    fun login(credentialsJson: String): Boolean {
+        val connection = openConnection("$BASE_URL/login", "POST") ?: return false
+        connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json")
+        return try {
+            java.io.OutputStreamWriter(connection.outputStream).use { it.write(credentialsJson) }
+            connection.responseCode == java.net.HttpURLConnection.HTTP_OK
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         } finally {
             connection.disconnect()
         }
@@ -50,7 +70,7 @@ object ApiClient {
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
         return try {
-            val json = clubToJson(club)
+            val json = ClubParser.clubToJson(club)
             OutputStreamWriter(connection.outputStream).use { it.write(json) }
             connection.responseCode == HttpURLConnection.HTTP_CREATED
         } catch (e: Exception) {
@@ -71,7 +91,7 @@ object ApiClient {
         connection.doOutput = true
         connection.setRequestProperty("Content-Type", "application/json")
         return try {
-            val json = clubToJson(club)
+            val json = ClubParser.clubToJson(club)
             OutputStreamWriter(connection.outputStream).use { it.write(json) }
             connection.responseCode == HttpURLConnection.HTTP_OK
         } catch (e: Exception) {
@@ -97,37 +117,5 @@ object ApiClient {
             e.printStackTrace()
             null
         }
-    }
-
-    private fun parseClubList(json: String): List<Club> {
-        val clubs = mutableListOf<Club>()
-        val array = try {
-            JSONArray(json)
-        } catch (e: Exception) {
-            // Might be a paginated response: { "data": [...] }
-            JSONObject(json).getJSONArray("data")
-        }
-        for (i in 0 until array.length()) {
-            clubs.add(parseClub(array.getJSONObject(i)))
-        }
-        return clubs
-    }
-
-    private fun parseClub(obj: JSONObject) = Club(
-        id         = obj.optInt("club_id", obj.optInt("id", -1)),
-        nom        = obj.optString("club_name", obj.optString("nom", "")),
-        rue        = obj.optString("club_street", null),
-        ville      = obj.optString("club_city", obj.optString("ville", "")),
-        codePostal = obj.optString("club_postal_code", null),
-        isApproved = obj.optBoolean("is_approved", false)
-    )
-
-    private fun clubToJson(club: Club): String {
-        return JSONObject().apply {
-            put("club_name", club.nom)
-            put("club_city", club.ville)
-            put("club_street", club.rue)
-            put("club_postal_code", club.codePostal)
-        }.toString()
     }
 }

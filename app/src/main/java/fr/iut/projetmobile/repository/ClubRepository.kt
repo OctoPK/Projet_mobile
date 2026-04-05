@@ -58,9 +58,17 @@ class ClubRepository(private val context: Context) {
         // Lance une exception si l'API est inaccessible
         val remote = ApiClient.getClubs()
 
+        // On sauvegarde les enregistrements qui n'ont pas pu être synchronisés pour ne pas les perdre
+        val unpushedDirty = dao.getDirty()
+
         // Si la récupération réussit, on met à jour la base locale
         dao.deleteAll()
         dao.insertAll(remote)
+
+        // Réinsère les clubs modifiés localement pour les préserver
+        for (dirtyClub in unpushedDirty) {
+            dao.insert(dirtyClub)
+        }
 
         return true
     }

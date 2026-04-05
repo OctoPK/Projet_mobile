@@ -89,8 +89,25 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
         val isFirstStart = prefs.getBoolean("isFirstStart", true)
+
+        //Toast de connexion au premier démarrage (Appel API vers /api/login)
         if (isFirstStart) {
-            Toast.makeText(this, "Connexion réussie !", Toast.LENGTH_LONG).show()
+            // TODO: Prépare ici l'appel vers fr.iut.projetmobile.network.ApiClient.login(credentialsJson) avec les données.
+            // Utilise thread { val success = ApiClient.login(...) ; runOnUiThread { Toast.makeText(...) } }
+            // Voici la base d'un appel :
+            /*
+            thread {
+                val myJsonCredentials = """{"email":"test@test.com", "password":"password"}"""
+                val isLogged = fr.iut.projetmobile.network.ApiClient.login(myJsonCredentials)
+                runOnUiThread {
+                    if (isLogged) {
+                        // Toast(...) : Connexion réussie !
+                    } else {
+                        // Toast(...) : Échec de la connexion
+                    }
+                }
+            }
+            */
             prefs.edit().putBoolean("isFirstStart", false).apply()
         }
 
@@ -210,7 +227,7 @@ class MainActivity : AppCompatActivity() {
                 clubs = repository.getAll()
                 runOnUiThread {
                     listView.adapter = ClubAdapter(this, clubs)
-                    tvStatus.text = if (clubs.isEmpty()) "Aucune donnée (lancez une synchro)" else "${clubs.size} clubs"
+                    tvStatus.text = if (clubs.isEmpty()) "Aucune donnée" else "${clubs.size} clubs"
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "loadList failed", e)
