@@ -14,12 +14,13 @@ class DetailActivity : AppCompatActivity() {
         const val EXTRA_CLUB_ID = "club_id"
     }
     private lateinit var repository: ClubRepository
-    private lateinit var etNom   : EditText
-    private lateinit var etVille : EditText
+    private lateinit var etNom   : TextView
+    private lateinit var etVille : TextView
     private lateinit var btnEdit : Button
     private lateinit var btnBack : Button
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
+    private lateinit var tvIdentifiant: TextView
     private var clubId: Int = -1
     private val editLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -37,6 +38,7 @@ class DetailActivity : AppCompatActivity() {
         btnBack      = findViewById(R.id.btnBack)
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
+        tvIdentifiant = findViewById(R.id.tvIdentifiant)
 
         findViewById<Button>(R.id.btnSave)?.visibility = View.GONE
 
@@ -71,8 +73,16 @@ class DetailActivity : AppCompatActivity() {
         }
     }
     private fun displayClub(club: Club) {
-        etNom.setText(club.nom)
-        etVille.setText(club.ville)
+        etNom.text = club.nom
+
+        val adresse = mutableListOf<String>()
+        if (!club.rue.isNullOrEmpty()) adresse.add(club.rue)
+        val villeCP = if (!club.codePostal.isNullOrEmpty()) "${club.ville} ${club.codePostal}" else club.ville
+        if (villeCP.isNotEmpty()) adresse.add(villeCP)
+
+        etVille.text = if (adresse.isNotEmpty()) adresse.joinToString(", ") else "Adresse non renseignée"
+
+        tvIdentifiant.text = "CLUB-${club.id}"
         tvDirty.visibility = if (club.isDirty) View.VISIBLE else View.GONE
     }
 }
