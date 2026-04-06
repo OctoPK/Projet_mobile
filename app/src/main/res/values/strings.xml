@@ -33,4 +33,13 @@
     <string name="login_email_required">Email requis</string>
     <string name="login_email_invalid">Email invalide</string>
     <string name="login_password_required">Mot de passe requis</string>
+
+    <string name="profile_title">Mon Profil</string>
+    <string name="profile_avatar_content_description">Avatar utilisateur</string>
+    <string name="profile_label_full_name">Nom Complet</string>
+    <string name="profile_label_email">Email</string>
+    <string name="profile_label_role">Role</string>
+    <string name="profile_default_name">Utilisateur</string>
+    <string name="profile_default_email">Email non renseigne</string>
+    <string name="profile_default_role">Utilisateur</string>
 </resources>

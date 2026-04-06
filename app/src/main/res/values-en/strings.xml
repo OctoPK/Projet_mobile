@@ -29,4 +29,13 @@
     <string name="login_email_required">Email is required</string>
     <string name="login_email_invalid">Invalid email address</string>
     <string name="login_password_required">Password is required</string>
+
+    <string name="profile_title">My Profile</string>
+    <string name="profile_avatar_content_description">User avatar</string>
+    <string name="profile_label_full_name">Full name</string>
+    <string name="profile_label_email">Email</string>
+    <string name="profile_label_role">Role</string>
+    <string name="profile_default_name">User</string>
+    <string name="profile_default_email">Email not set</string>
+    <string name="profile_default_role">User</string>
 </resources>

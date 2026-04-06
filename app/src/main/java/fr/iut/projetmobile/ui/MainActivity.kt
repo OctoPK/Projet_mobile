@@ -1,7 +1,6 @@
 ﻿package fr.iut.projetmobile.ui
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -26,6 +25,14 @@ import fr.iut.projetmobile.repository.ClubRepository
 import org.json.JSONObject
 import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        const val PREFS_NAME = "AppPrefs"
+        const val PREF_IS_FIRST_START = "isFirstStart"
+        const val PREF_USER_EMAIL = "userEmail"
+        const val PREF_USER_NAME = "userName"
+        const val PREF_USER_ROLE = "userRole"
+    }
 
     interface NetworkState {
         fun handle(context: MainActivity)
@@ -77,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivNetworkStatus: ImageView
     private lateinit var tvStatus: TextView
     private lateinit var fab: FloatingActionButton
+    private lateinit var prefs: android.content.SharedPreferences
     private var clubs: List<Club> = emptyList()
     private val detailLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -92,11 +100,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
-        val isFirstStart = prefs.getBoolean("isFirstStart", true)
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        if (isFirstStart) {
-            showFirstLoginDialog(prefs)
+        if (prefs.getBoolean(PREF_IS_FIRST_START, true)) {
+            showFirstLoginDialog()
         }
 
         // Configure NavHeader
@@ -140,6 +147,12 @@ class MainActivity : AppCompatActivity() {
                         true
                     }
                     3 -> {
+                        prefs.edit()
+                            .putBoolean(PREF_IS_FIRST_START, true)
+                            .remove(PREF_USER_EMAIL)
+                            .remove(PREF_USER_NAME)
+                            .remove(PREF_USER_ROLE)
+                            .apply()
                         Toast.makeText(this, "Déconnexion réussie", Toast.LENGTH_SHORT).show()
                         finish() // Simulate logout
                         true
@@ -151,7 +164,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showFirstLoginDialog(prefs: SharedPreferences) {
+    private fun showFirstLoginDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_login, null)
         val etEmail = dialogView.findViewById<EditText>(R.id.etLoginEmail)
         val etPassword = dialogView.findViewById<EditText>(R.id.etLoginPassword)
@@ -215,7 +228,12 @@ class MainActivity : AppCompatActivity() {
                         btnCancel.isEnabled = true
 
                         if (isLogged) {
-                            prefs.edit().putBoolean("isFirstStart", false).apply()
+                            prefs.edit()
+                                .putBoolean(PREF_IS_FIRST_START, false)
+                                .putString(PREF_USER_EMAIL, email)
+                                .putString(PREF_USER_NAME, buildDisplayNameFromEmail(email))
+                                .putString(PREF_USER_ROLE, getString(R.string.profile_default_role))
+                                .apply()
                             Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
                             dialog.dismiss()
                         } else {
@@ -227,6 +245,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun buildDisplayNameFromEmail(email: String): String {
+        val localPart = email.substringBefore("@").trim()
+        if (localPart.isEmpty()) return email
+        return localPart
+            .split('.', '_', '-')
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { part -> part.replaceFirstChar { it.uppercaseChar() } }
+            .ifBlank { email }
     }
 
     private fun isNetworkAvailable(): Boolean {
