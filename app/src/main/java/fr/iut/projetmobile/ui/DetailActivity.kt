@@ -22,8 +22,11 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var tvIdentifiant: TextView
+    private lateinit var cardMembers: View
+    private lateinit var llMembersContainer: LinearLayout
     private var clubId: Int = -1
     private var isLoggedIn: Boolean = false
+    private var userEmail: String = ""
     private val editLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -41,6 +44,8 @@ class DetailActivity : AppCompatActivity() {
         tvDirty      = findViewById(R.id.tvDirty)
         progressBar  = findViewById(R.id.progressBar)
         tvIdentifiant = findViewById(R.id.tvIdentifiant)
+        cardMembers  = findViewById(R.id.cardMembers)
+        llMembersContainer = findViewById(R.id.llMembersContainer)
 
         findViewById<Button>(R.id.btnSave)?.visibility = View.GONE
 
@@ -48,6 +53,7 @@ class DetailActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
         isLoggedIn = !prefs.getBoolean(MainActivity.PREF_IS_FIRST_START, true)
+        userEmail = prefs.getString(MainActivity.PREF_USER_EMAIL, "") ?: ""
 
         findViewById<TextView>(R.id.tvNavTitle).text = getString(R.string.detail_title)
 
@@ -70,6 +76,10 @@ class DetailActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         thread {
             val club = repository.getById(id)
+            val membersList = if (isLoggedIn && userEmail.isNotEmpty()) {
+                fr.iut.projetmobile.network.ApiClient.getClubMembers(id) ?: emptyList()
+            } else emptyList()
+
             runOnUiThread {
                 progressBar.visibility = View.GONE
                 if (club == null) {
@@ -77,9 +87,30 @@ class DetailActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
                 displayClub(club)
+                displayMembers(membersList)
             }
         }
     }
+
+    private fun displayMembers(membersList: List<Pair<String, String>>) {
+        val isMember = membersList.any { it.second.equals(userEmail, ignoreCase = true) }
+        if (isMember && membersList.isNotEmpty()) {
+            cardMembers.visibility = View.VISIBLE
+            llMembersContainer.removeAllViews()
+            for (member in membersList) {
+                val tv = TextView(this).apply {
+                    text = "${member.first} (${member.second})"
+                    textSize = 14f
+                    setTextColor(android.graphics.Color.parseColor("#7F8C8D"))
+                    setPadding(0, 8, 0, 8)
+                }
+                llMembersContainer.addView(tv)
+            }
+        } else {
+            cardMembers.visibility = View.GONE
+        }
+    }
+
     private fun displayClub(club: Club) {
         etNom.text = club.nom
 

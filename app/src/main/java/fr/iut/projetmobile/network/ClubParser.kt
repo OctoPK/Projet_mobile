@@ -83,6 +83,30 @@ object ClubParser {
         return null
     }
 
+    fun extractMembersForClub(jsonRaw: String, clubId: Int): List<Pair<String, String>>? {
+        try {
+            val array = getClubsArray(jsonRaw)
+            for (i in 0 until array.length()) {
+                val clubObj = array.getJSONObject(i)
+                val currentClubId = clubObj.optInt("club_id", clubObj.optInt("id", -1))
+                if (currentClubId == clubId) {
+                    val membersArray = clubObj.optJSONArray("members") ?: return emptyList()
+                    val membersList = mutableListOf<Pair<String, String>>()
+                    for (j in 0 until membersArray.length()) {
+                        val member = membersArray.getJSONObject(j)
+                        val name = member.optString("name", member.optString("first_name", "") + " " + member.optString("last_name", ""))
+                        val email = member.optString("email", "")
+                        membersList.add(Pair(name, email))
+                    }
+                    return membersList
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
     private fun parseClub(obj: JSONObject) = Club(
         id         = obj.optInt("club_id", obj.optInt("id", -1)),
         nom        = obj.optString("club_name", obj.optString("nom", "")),

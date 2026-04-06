@@ -61,6 +61,26 @@ object ApiClient {
         }
     }
 
+    /**
+     * Renvoie la liste des noms des membres d'un club s'il existe.
+     */
+    fun getClubMembers(clubId: Int): List<Pair<String, String>>? {
+        val connection = openConnection("$BASE_URL/clubs", "GET") ?: return null
+        return try {
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val body = connection.inputStream.bufferedReader().readText()
+                ClubParser.extractMembersForClub(body, clubId)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     // ----------------------------------------------------------------- AUTH
     /**
      * Authentification de l'utilisateur (POST /api/login).
