@@ -1,4 +1,5 @@
 ﻿package fr.iut.projetmobile.ui
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -22,6 +23,7 @@ class DetailActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var tvIdentifiant: TextView
     private var clubId: Int = -1
+    private var isLoggedIn: Boolean = false
     private val editLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -44,15 +46,21 @@ class DetailActivity : AppCompatActivity() {
 
         clubId = intent.getIntExtra(EXTRA_CLUB_ID, -1)
 
-        findViewById<TextView>(R.id.tvNavTitle).text = "Détail du club"
+        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        isLoggedIn = !prefs.getBoolean(MainActivity.PREF_IS_FIRST_START, true)
 
-        btnEdit.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.tvNavTitle).text = getString(R.string.detail_title)
+
+        btnEdit.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
         etNom.isEnabled = false
         etVille.isEnabled = false
 
         loadClub(clubId)
 
         btnEdit.setOnClickListener {
+            if (!isLoggedIn) {
+                return@setOnClickListener
+            }
             val intent = Intent(this, EditClubActivity::class.java)
             intent.putExtra(EditClubActivity.EXTRA_CLUB_ID, clubId)
             editLauncher.launch(intent)

@@ -22,4 +22,33 @@
     <string name="main_sync">Synchronisation</string>
     <string name="title_detail_club">Détail</string>
     <string name="title_new_club">Nouveau</string>
+
+    <string name="login_dialog_title">Connexion</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Mot de passe</string>
+    <string name="login_action_sign_in">Se connecter</string>
+    <string name="login_action_cancel">Annuler</string>
+    <string name="login_success">Connexion reussie</string>
+    <string name="login_failed">Echec de la connexion</string>
+    <string name="login_email_required">Email requis</string>
+    <string name="login_email_invalid">Email invalide</string>
+    <string name="login_password_required">Mot de passe requis</string>
+
+    <string name="profile_title">Mon Profil</string>
+    <string name="profile_avatar_content_description">Avatar utilisateur</string>
+    <string name="profile_label_full_name">Nom Complet</string>
+    <string name="profile_label_email">Email</string>
+    <string name="profile_label_role">Role</string>
+    <string name="profile_default_name">Utilisateur</string>
+    <string name="profile_default_email">Email non renseigne</string>
+    <string name="profile_default_role">Utilisateur</string>
+
+    <string name="menu_login">Connexion</string>
+    <string name="menu_profile">Profil</string>
+    <string name="menu_my_club">Mon Club</string>
+    <string name="menu_logout">Deconnexion</string>
+    <string name="menu_my_club_coming_soon">Mon Club : fonctionnalite a venir</string>
+    <string name="menu_logout_success">Deconnexion reussie</string>
+
+    <string name="detail_title">Detail du club</string>
 </resources>

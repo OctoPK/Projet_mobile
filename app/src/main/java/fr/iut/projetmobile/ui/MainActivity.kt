@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,10 +20,19 @@ import androidx.appcompat.widget.PopupMenu
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
+import fr.iut.projetmobile.network.ApiClient
 import fr.iut.projetmobile.repository.ClubRepository
 import org.json.JSONObject
 import kotlin.concurrent.thread
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        const val PREFS_NAME = "AppPrefs"
+        const val PREF_IS_FIRST_START = "isFirstStart"
+        const val PREF_USER_EMAIL = "userEmail"
+        const val PREF_USER_NAME = "userName"
+        const val PREF_USER_ROLE = "userRole"
+    }
 
     interface NetworkState {
         fun handle(context: MainActivity)
@@ -74,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ivNetworkStatus: ImageView
     private lateinit var tvStatus: TextView
     private lateinit var fab: FloatingActionButton
+    private lateinit var prefs: android.content.SharedPreferences
     private var clubs: List<Club> = emptyList()
     private val detailLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -89,6 +100,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        if (!isUserLoggedIn()) {
+            showFirstLoginDialog()
+        }
 
         // Configure NavHeader
         findViewById<TextView>(R.id.tvNavTitle).text = "Clubs"
@@ -117,57 +133,144 @@ class MainActivity : AppCompatActivity() {
 
         fab.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
-            popup.menu.add(0, 1, 0, "Profil")
-            popup.menu.add(0, 2, 0, "Mon Club")
-            popup.menu.add(0, 3, 0, "Déconnexion")
-            popup.setOnMenuItemClickListener { menuItem ->
-                when (menuItem.itemId) {
-                    1 -> {
-                        startActivity(Intent(this, ProfileActivity::class.java))
-                        true
+
+            if (!isUserLoggedIn()) {
+                popup.menu.add(0, 10, 0, getString(R.string.menu_login))
+                popup.setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        10 -> {
+                            showFirstLoginDialog()
+                            true
+                        }
+                        else -> false
                     }
-                    2 -> {
-                        Toast.makeText(this, "Mon Club : Fonctionnalité à venir", Toast.LENGTH_SHORT).show()
-                        true
+                }
+            } else {
+                popup.menu.add(0, 1, 0, getString(R.string.menu_profile))
+                popup.menu.add(0, 2, 0, getString(R.string.menu_my_club))
+                popup.menu.add(0, 3, 0, getString(R.string.menu_logout))
+                popup.setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        1 -> {
+                            startActivity(Intent(this, ProfileActivity::class.java))
+                            true
+                        }
+                        2 -> {
+                            Toast.makeText(this, getString(R.string.menu_my_club_coming_soon), Toast.LENGTH_SHORT).show()
+                            true
+                        }
+                        3 -> {
+                            prefs.edit()
+                                .putBoolean(PREF_IS_FIRST_START, true)
+                                .remove(PREF_USER_EMAIL)
+                                .remove(PREF_USER_NAME)
+                                .remove(PREF_USER_ROLE)
+                                .apply()
+                            Toast.makeText(this, getString(R.string.menu_logout_success), Toast.LENGTH_SHORT).show()
+                            true
+                        }
+                        else -> false
                     }
-                    3 -> {
-                        Toast.makeText(this, "Déconnexion réussie", Toast.LENGTH_SHORT).show()
-                        finish() // Simulate logout
-                        true
-                    }
-                    else -> false
                 }
             }
+
             popup.show()
         }
     }
 
-    private fun showLoginDialog() {
-        // TODO Implémenter la popup de connexion.
-        //
-        // --- UTILISATION DE L'API ---
-        // Endpoint : POST /api/login
-        //
-        // . Formate les chaînes dans un objet JSON :
-        //    val json = JSONObject().apply { put("email", tonEmail); put("password", tonPassword) }.toString()
-        //
-        // . Lance la requête asynchrone (ex: via un thread en arrière-plan) :
-        //    thread {
-        //        val isLogged = fr.iut.projetmobile.network.ApiClient.login(json)
-        //        runOnUiThread {
-        //            if (isLogged) {
-        //                // Connexion réussie (Code API 200)
-        //                getSharedPreferences("AppPrefs", Context.MODE_PRIVATE).edit().putBoolean("isLoggedIn", true).apply()
-        //                // Affiche un Toast de confirmation, cache ton AlertDialog
-        //            } else {
-        //                // Échec de la connexion (Code 401)
-        //                // Affiche un Toast d'erreur
-        //            }
-        //        }
-        //    }
-        //
-        // Aide-toi de fr.iut.projetmobile.network.ApiClient.login() que j'ai préparé.
-        Toast.makeText(this, "Popup de connexion à créer par le partenaire !", Toast.LENGTH_LONG).show()
+    private fun showFirstLoginDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_login, null)
+        val etEmail = dialogView.findViewById<EditText>(R.id.etLoginEmail)
+        val etPassword = dialogView.findViewById<EditText>(R.id.etLoginPassword)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.login_dialog_title)
+            .setView(dialogView)
+            .setCancelable(false)
+            .setPositiveButton(R.string.login_action_sign_in, null)
+            .setNegativeButton(R.string.login_action_cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            val btnSignIn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val btnCancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+
+            btnCancel.setOnClickListener {
+                dialog.dismiss()
+            }
+
+            btnSignIn.setOnClickListener {
+                val email = etEmail.text?.toString()?.trim().orEmpty()
+                val password = etPassword.text?.toString().orEmpty()
+
+                when {
+                    email.isEmpty() -> {
+                        etEmail.error = getString(R.string.login_email_required)
+                        etEmail.requestFocus()
+                        return@setOnClickListener
+                    }
+                    !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                        etEmail.error = getString(R.string.login_email_invalid)
+                        etEmail.requestFocus()
+                        return@setOnClickListener
+                    }
+                    password.isEmpty() -> {
+                        etPassword.error = getString(R.string.login_password_required)
+                        etPassword.requestFocus()
+                        return@setOnClickListener
+                    }
+                }
+
+                etEmail.error = null
+                etPassword.error = null
+                btnSignIn.isEnabled = false
+                btnCancel.isEnabled = false
+
+                thread {
+                    val credentialsJson = JSONObject()
+                        .put("email", email)
+                        .put("password", password)
+                        .toString()
+
+                    val isLogged = try {
+                        ApiClient.login(credentialsJson)
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Login failed", e)
+                        false
+                    }
+
+                    runOnUiThread {
+                        btnSignIn.isEnabled = true
+                        btnCancel.isEnabled = true
+
+                        if (isLogged) {
+                            prefs.edit()
+                                .putBoolean(PREF_IS_FIRST_START, false)
+                                .putString(PREF_USER_EMAIL, email)
+                                .putString(PREF_USER_NAME, buildDisplayNameFromEmail(email))
+                                .putString(PREF_USER_ROLE, getString(R.string.profile_default_role))
+                                .apply()
+                            Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
+                        } else {
+                            Toast.makeText(this, getString(R.string.login_failed), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun buildDisplayNameFromEmail(email: String): String {
+        val localPart = email.substringBefore("@").trim()
+        if (localPart.isEmpty()) return email
+        return localPart
+            .split('.', '_', '-')
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { part -> part.replaceFirstChar { it.uppercaseChar() } }
+            .ifBlank { email }
     }
 
     private fun isNetworkAvailable(): Boolean {
@@ -277,5 +380,9 @@ class MainActivity : AppCompatActivity() {
             btnViewDetails.isFocusable = false
             return view
         }
+    }
+
+    private fun isUserLoggedIn(): Boolean {
+        return !prefs.getBoolean(PREF_IS_FIRST_START, true)
     }
 }

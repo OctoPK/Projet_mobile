@@ -18,5 +18,33 @@
     <string name="add_save">Save</string>
     <string name="hint_nom">Enter the club name</string>
     <string name="hint_ville">Enter the city</string>
-</resources>
 
+    <string name="login_dialog_title">Sign in</string>
+    <string name="login_email_hint">Email</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_action_sign_in">Sign in</string>
+    <string name="login_action_cancel">Cancel</string>
+    <string name="login_success">Signed in successfully</string>
+    <string name="login_failed">Sign in failed</string>
+    <string name="login_email_required">Email is required</string>
+    <string name="login_email_invalid">Invalid email address</string>
+    <string name="login_password_required">Password is required</string>
+
+    <string name="profile_title">My Profile</string>
+    <string name="profile_avatar_content_description">User avatar</string>
+    <string name="profile_label_full_name">Full name</string>
+    <string name="profile_label_email">Email</string>
+    <string name="profile_label_role">Role</string>
+    <string name="profile_default_name">User</string>
+    <string name="profile_default_email">Email not set</string>
+    <string name="profile_default_role">User</string>
+
+    <string name="menu_login">Sign in</string>
+    <string name="menu_profile">Profile</string>
+    <string name="menu_my_club">My Club</string>
+    <string name="menu_logout">Sign out</string>
+    <string name="menu_my_club_coming_soon">My Club: feature coming soon</string>
+    <string name="menu_logout_success">Signed out successfully</string>
+
+    <string name="detail_title">Club details</string>
+</resources>
