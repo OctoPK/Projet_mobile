@@ -42,4 +42,13 @@
     <string name="profile_default_name">Utilisateur</string>
     <string name="profile_default_email">Email non renseigne</string>
     <string name="profile_default_role">Utilisateur</string>
+
+    <string name="menu_login">Connexion</string>
+    <string name="menu_profile">Profil</string>
+    <string name="menu_my_club">Mon Club</string>
+    <string name="menu_logout">Deconnexion</string>
+    <string name="menu_my_club_coming_soon">Mon Club : fonctionnalite a venir</string>
+    <string name="menu_logout_success">Deconnexion reussie</string>
+
+    <string name="detail_title">Detail du club</string>
 </resources>

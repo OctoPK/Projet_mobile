@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        if (prefs.getBoolean(PREF_IS_FIRST_START, true)) {
+        if (!isUserLoggedIn()) {
             showFirstLoginDialog()
         }
 
@@ -133,33 +133,47 @@ class MainActivity : AppCompatActivity() {
 
         fab.setOnClickListener { view ->
             val popup = PopupMenu(this, view)
-            popup.menu.add(0, 1, 0, "Profil")
-            popup.menu.add(0, 2, 0, "Mon Club")
-            popup.menu.add(0, 3, 0, "Déconnexion")
-            popup.setOnMenuItemClickListener { menuItem ->
-                when (menuItem.itemId) {
-                    1 -> {
-                        startActivity(Intent(this, ProfileActivity::class.java))
-                        true
+
+            if (!isUserLoggedIn()) {
+                popup.menu.add(0, 10, 0, getString(R.string.menu_login))
+                popup.setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        10 -> {
+                            showFirstLoginDialog()
+                            true
+                        }
+                        else -> false
                     }
-                    2 -> {
-                        Toast.makeText(this, "Mon Club : Fonctionnalité à venir", Toast.LENGTH_SHORT).show()
-                        true
+                }
+            } else {
+                popup.menu.add(0, 1, 0, getString(R.string.menu_profile))
+                popup.menu.add(0, 2, 0, getString(R.string.menu_my_club))
+                popup.menu.add(0, 3, 0, getString(R.string.menu_logout))
+                popup.setOnMenuItemClickListener { menuItem ->
+                    when (menuItem.itemId) {
+                        1 -> {
+                            startActivity(Intent(this, ProfileActivity::class.java))
+                            true
+                        }
+                        2 -> {
+                            Toast.makeText(this, getString(R.string.menu_my_club_coming_soon), Toast.LENGTH_SHORT).show()
+                            true
+                        }
+                        3 -> {
+                            prefs.edit()
+                                .putBoolean(PREF_IS_FIRST_START, true)
+                                .remove(PREF_USER_EMAIL)
+                                .remove(PREF_USER_NAME)
+                                .remove(PREF_USER_ROLE)
+                                .apply()
+                            Toast.makeText(this, getString(R.string.menu_logout_success), Toast.LENGTH_SHORT).show()
+                            true
+                        }
+                        else -> false
                     }
-                    3 -> {
-                        prefs.edit()
-                            .putBoolean(PREF_IS_FIRST_START, true)
-                            .remove(PREF_USER_EMAIL)
-                            .remove(PREF_USER_NAME)
-                            .remove(PREF_USER_ROLE)
-                            .apply()
-                        Toast.makeText(this, "Déconnexion réussie", Toast.LENGTH_SHORT).show()
-                        finish() // Simulate logout
-                        true
-                    }
-                    else -> false
                 }
             }
+
             popup.show()
         }
     }
@@ -174,14 +188,16 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setCancelable(false)
             .setPositiveButton(R.string.login_action_sign_in, null)
-            .setNegativeButton(R.string.login_action_cancel) { _, _ ->
-                finish()
-            }
+            .setNegativeButton(R.string.login_action_cancel, null)
             .create()
 
         dialog.setOnShowListener {
             val btnSignIn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val btnCancel = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+
+            btnCancel.setOnClickListener {
+                dialog.dismiss()
+            }
 
             btnSignIn.setOnClickListener {
                 val email = etEmail.text?.toString()?.trim().orEmpty()
@@ -359,5 +375,9 @@ class MainActivity : AppCompatActivity() {
             btnViewDetails.isFocusable = false
             return view
         }
+    }
+
+    private fun isUserLoggedIn(): Boolean {
+        return !prefs.getBoolean(PREF_IS_FIRST_START, true)
     }
 }
