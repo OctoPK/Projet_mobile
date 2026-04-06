@@ -119,10 +119,13 @@ object ClubParser {
 
     fun clubToJson(club: Club): String {
         return JSONObject().apply {
+            put("club_id", club.id)
             put("club_name", club.nom)
             put("club_city", club.ville)
-            put("club_street", club.rue)
-            put("club_postal_code", club.codePostal)
+            put("club_street", club.rue ?: "")
+            put("club_postal_code", club.codePostal ?: "")
+            put("is_approved", club.isApproved)
+            put("member_count", club.memberCount)
         }.toString()
     }
 }

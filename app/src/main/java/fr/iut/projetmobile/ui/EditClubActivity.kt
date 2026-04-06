@@ -1,13 +1,18 @@
 ﻿package fr.iut.projetmobile.ui
+
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.repository.ClubRepository
-import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 class EditClubActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_CLUB_ID = "club_id"
@@ -20,6 +25,7 @@ class EditClubActivity : AppCompatActivity() {
     private lateinit var tvDirty : TextView
     private lateinit var progressBar: ProgressBar
     private var currentClub: Club? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_club)
@@ -39,7 +45,6 @@ class EditClubActivity : AppCompatActivity() {
         etVille.isEnabled = true
 
         val clubId = intent.getIntExtra(EXTRA_CLUB_ID, MODE_CREATE)
-
         val tvNavTitle = findViewById<TextView>(R.id.tvNavTitle)
 
         if (clubId == MODE_CREATE) {
@@ -51,53 +56,62 @@ class EditClubActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener { saveClub() }
     }
+
     private fun loadClub(id: Int) {
         progressBar.visibility = View.VISIBLE
-        thread {
-            val club = repository.getById(id)
-            runOnUiThread {
-                progressBar.visibility = View.GONE
-                if (club == null) {
-                    finish()
-                    return@runOnUiThread
-                }
-                currentClub = club
-                displayClub(club)
+        lifecycleScope.launch {
+            val club = withContext(Dispatchers.IO) {
+                repository.getById(id)
             }
+            progressBar.visibility = View.GONE
+            if (club == null) {
+                finish()
+                return@launch
+            }
+            currentClub = club
+            displayClub(club)
         }
     }
+
     private fun displayClub(club: Club) {
         etNom.setText(club.nom)
         etVille.setText(club.ville)
-        tvDirty.visibility = if (club.isDirty) View.VISIBLE else View.GONE
+        tvDirty.visibility = View.GONE
     }
+
     private fun saveClub() {
         val nom   = etNom.text.toString().trim()
         val ville = etVille.text.toString().trim()
         if (nom.isEmpty()) { etNom.error   = "Champ requis"; return }
         if (ville.isEmpty()) { etVille.error = "Champ requis"; return }
+
         val id = currentClub?.id ?: (-(System.currentTimeMillis() % 100000).toInt())
+        
+        // On crée l'objet en préservant les données non éditées (rue, code postal, etc.)
         val updatedClub = Club(
-            id      = id,
-            nom     = nom,
-            ville   = ville,
+            id = id,
+            nom = nom,
+            ville = ville,
+            rue = currentClub?.rue,
+            codePostal = currentClub?.codePostal,
+            isApproved = currentClub?.isApproved ?: false,
+            memberCount = currentClub?.memberCount ?: 0,
             isDirty = true
         )
+
         progressBar.visibility = View.VISIBLE
-        thread {
+        lifecycleScope.launch {
             try {
-                repository.saveLocally(updatedClub)
-                runOnUiThread {
-                    progressBar.visibility = View.GONE
-                    setResult(RESULT_OK)
-                    finish()
+                withContext(Dispatchers.IO) {
+                    repository.saveLocally(updatedClub)
                 }
+                progressBar.visibility = View.GONE
+                setResult(RESULT_OK)
+                finish()
             } catch (e: Exception) {
                 Log.e("EditClubActivity", "Erreur lors de la sauvegarde locale", e)
-                runOnUiThread {
-                    progressBar.visibility = View.GONE
-                    Toast.makeText(this@EditClubActivity, "Erreur sauvegarde: ${e.message}", Toast.LENGTH_LONG).show()
-                }
+                progressBar.visibility = View.GONE
+                Toast.makeText(this@EditClubActivity, "Erreur sauvegarde: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }

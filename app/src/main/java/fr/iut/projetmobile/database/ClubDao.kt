@@ -12,9 +12,6 @@ interface ClubDao {
     @Query("SELECT * FROM clubs WHERE club_id = :id")
     fun getById(id: Int): Club?
 
-    @Query("SELECT * FROM clubs WHERE isDirty = 1")
-    fun getDirty(): List<Club>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(club: Club)
 

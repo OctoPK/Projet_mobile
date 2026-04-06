@@ -4,10 +4,6 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/**
- * Ressource choisie : Club
- * Adaptez les champs selon la documentation de l'API.
- */
 @Entity(tableName = "clubs")
 data class Club(
     @PrimaryKey
@@ -32,5 +28,6 @@ data class Club(
     @ColumnInfo(name = "member_count")
     val memberCount: Int = 0,
 
-    val isDirty: Boolean = false  // true = modifié localement, à synchroniser
+    @ColumnInfo(name = "is_dirty")
+    val isDirty: Boolean = false
 )

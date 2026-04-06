@@ -1,6 +1,8 @@
 ﻿package fr.iut.projetmobile.ui
+
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -17,13 +19,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import fr.iut.projetmobile.R
 import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.network.ApiClient
 import fr.iut.projetmobile.repository.ClubRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import kotlin.concurrent.thread
+
 class MainActivity : AppCompatActivity() {
 
     companion object {
@@ -32,6 +39,7 @@ class MainActivity : AppCompatActivity() {
         const val PREF_USER_EMAIL = "userEmail"
         const val PREF_USER_NAME = "userName"
         const val PREF_USER_ROLE = "userRole"
+        const val PREF_AUTH_TOKEN = "authToken"
     }
 
     interface NetworkState {
@@ -97,24 +105,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+        // Restaurer le token dans l'ApiClient au démarrage
+        val savedToken = prefs.getString(PREF_AUTH_TOKEN, null)
+        if (savedToken != null) {
+            ApiClient.setAuthToken(savedToken)
+        }
+
         if (!isUserLoggedIn()) {
             showFirstLoginDialog()
         }
 
-        // Configure NavHeader
         findViewById<TextView>(R.id.tvNavTitle).text = "Clubs"
         val btnNavProfile = findViewById<ImageView>(R.id.btnNavProfile)
-        btnNavProfile.visibility = View.GONE // Removed profil from top since it's in the FAB menu now
+        btnNavProfile.visibility = View.GONE
 
         listView    = findViewById(R.id.listView)
         ivNetworkStatus = findViewById(R.id.ivNetworkStatus)
         tvStatus    = findViewById(R.id.tvStatus)
         fab         = findViewById(R.id.fab)
+        
         try {
             repository  = ClubRepository(this)
             loadList()
@@ -124,6 +139,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         setupNetworkCallback()
+        
         listView.setOnItemClickListener { _, _, position, _ ->
             val club = clubs[position]
             val intent = Intent(this, DetailActivity::class.java)
@@ -159,16 +175,16 @@ class MainActivity : AppCompatActivity() {
                             val userEmail = prefs.getString(PREF_USER_EMAIL, "") ?: ""
                             if (userEmail.isNotEmpty()) {
                                 Toast.makeText(this@MainActivity, "Recherche de votre club...", Toast.LENGTH_SHORT).show()
-                                thread {
-                                    val clubId = fr.iut.projetmobile.network.ApiClient.findClubIdForEmail(userEmail)
-                                    runOnUiThread {
-                                        if (clubId != null && clubId != -1) {
-                                            val detailIntent = Intent(this@MainActivity, DetailActivity::class.java)
-                                            detailIntent.putExtra(DetailActivity.EXTRA_CLUB_ID, clubId)
-                                            detailLauncher.launch(detailIntent)
-                                        } else {
-                                            Toast.makeText(this@MainActivity, "Vous n'êtes membre d'aucun club.", Toast.LENGTH_LONG).show()
-                                        }
+                                lifecycleScope.launch {
+                                    val clubId = withContext(Dispatchers.IO) {
+                                        ApiClient.findClubIdForEmail(userEmail)
+                                    }
+                                    if (clubId != null && clubId != -1) {
+                                        val detailIntent = Intent(this@MainActivity, DetailActivity::class.java)
+                                        detailIntent.putExtra(DetailActivity.EXTRA_CLUB_ID, clubId)
+                                        detailLauncher.launch(detailIntent)
+                                    } else {
+                                        Toast.makeText(this@MainActivity, "Vous n'êtes membre d'aucun club.", Toast.LENGTH_LONG).show()
                                     }
                                 }
                             } else {
@@ -177,12 +193,14 @@ class MainActivity : AppCompatActivity() {
                             true
                         }
                         3 -> {
-                            prefs.edit()
-                                .putBoolean(PREF_IS_FIRST_START, true)
-                                .remove(PREF_USER_EMAIL)
-                                .remove(PREF_USER_NAME)
-                                .remove(PREF_USER_ROLE)
-                                .apply()
+                            prefs.edit {
+                                putBoolean(PREF_IS_FIRST_START, true)
+                                remove(PREF_USER_EMAIL)
+                                remove(PREF_USER_NAME)
+                                remove(PREF_USER_ROLE)
+                                remove(PREF_AUTH_TOKEN)
+                            }
+                            ApiClient.setAuthToken(null)
                             Toast.makeText(this, getString(R.string.menu_logout_success), Toast.LENGTH_SHORT).show()
                             true
                         }
@@ -190,7 +208,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-
             popup.show()
         }
     }
@@ -238,45 +255,45 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                etEmail.error = null
-                etPassword.error = null
                 btnSignIn.isEnabled = false
                 btnCancel.isEnabled = false
 
-                thread {
+                lifecycleScope.launch {
                     val credentialsJson = JSONObject()
                         .put("email", email)
                         .put("password", password)
                         .toString()
 
                     val isLogged = try {
-                        ApiClient.login(credentialsJson)
+                        withContext(Dispatchers.IO) {
+                            ApiClient.login(credentialsJson)
+                        }
                     } catch (e: Exception) {
                         Log.e("MainActivity", "Login failed", e)
                         false
                     }
 
-                    runOnUiThread {
-                        btnSignIn.isEnabled = true
-                        btnCancel.isEnabled = true
+                    btnSignIn.isEnabled = true
+                    btnCancel.isEnabled = true
 
-                        if (isLogged) {
-                            prefs.edit()
-                                .putBoolean(PREF_IS_FIRST_START, false)
-                                .putString(PREF_USER_EMAIL, email)
-                                .putString(PREF_USER_NAME, buildDisplayNameFromEmail(email))
-                                .putString(PREF_USER_ROLE, getString(R.string.profile_default_role))
-                                .apply()
-                            Toast.makeText(this, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
-                            dialog.dismiss()
-                        } else {
-                            Toast.makeText(this, getString(R.string.login_failed), Toast.LENGTH_SHORT).show()
+                    if (isLogged) {
+                        val token = ApiClient.getAuthToken()
+                        prefs.edit {
+                            putBoolean(PREF_IS_FIRST_START, false)
+                            putString(PREF_USER_EMAIL, email)
+                            putString(PREF_USER_NAME, buildDisplayNameFromEmail(email))
+                            putString(PREF_USER_ROLE, getString(R.string.profile_default_role))
+                            putString(PREF_AUTH_TOKEN, token)
                         }
+                        Toast.makeText(this@MainActivity, getString(R.string.login_success), Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                        performSync()
+                    } else {
+                        Toast.makeText(this@MainActivity, getString(R.string.login_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
-
         dialog.show()
     }
 
@@ -296,8 +313,9 @@ class MainActivity : AppCompatActivity() {
         val caps = cm.getNetworkCapabilities(network) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
+
     private fun setupNetworkCallback() {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 setNetworkState(ConnectedNoApiState)
@@ -318,52 +336,52 @@ class MainActivity : AppCompatActivity() {
             setNetworkState(DisconnectedState)
         }
     }
+
     private fun performSync() {
-        runOnUiThread { tvStatus.text = "Synchronisation en cours…" }
-        thread {
+        tvStatus.text = "Synchronisation en cours…"
+        lifecycleScope.launch {
             val success = try {
                 repository.sync()
             } catch (e: Exception) {
                 Log.e("MainActivity", "Sync failed", e)
                 false
             }
-            runOnUiThread {
-                if (success) {
-                    setNetworkState(ConnectedApiState)
-                    tvStatus.text = "Synchronisé"
-                    loadList()
-                } else {
-                    setNetworkState(ConnectedNoApiState)
-                    tvStatus.text = "Échec API (nouvelle tentative dans 10s...)"
-                    retryHandler.removeCallbacks(retryRunnable)
-                    retryHandler.postDelayed(retryRunnable, 10000)
-                }
+            if (success) {
+                setNetworkState(ConnectedApiState)
+                tvStatus.text = "Synchronisé"
+                loadList()
+            } else {
+                setNetworkState(ConnectedNoApiState)
+                tvStatus.text = "Échec API (nouvelle tentative dans 10s...)"
+                retryHandler.removeCallbacks(retryRunnable)
+                retryHandler.postDelayed(retryRunnable, 10000)
             }
         }
     }
+
     override fun onDestroy() {
         super.onDestroy()
         networkCallback?.let {
-            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
             cm.unregisterNetworkCallback(it)
         }
     }
+
     private fun loadList() {
-        thread {
+        lifecycleScope.launch {
             try {
-                clubs = repository.getAll()
-                runOnUiThread {
-                    listView.adapter = ClubAdapter(this, clubs)
-                    tvStatus.text = if (clubs.isEmpty()) "Aucune donnée" else "${clubs.size} clubs"
+                clubs = withContext(Dispatchers.IO) {
+                    repository.getAll()
                 }
+                listView.adapter = ClubAdapter(this@MainActivity, clubs)
+                tvStatus.text = if (clubs.isEmpty()) "Aucune donnée" else "${clubs.size} clubs"
             } catch (e: Exception) {
                 Log.e("MainActivity", "loadList failed", e)
-                runOnUiThread {
-                    tvStatus.text = "Erreur lecture locale"
-                }
+                tvStatus.text = "Erreur lecture locale"
             }
         }
     }
+
     private inner class ClubAdapter(context: Context, private val items: List<Club>) : ArrayAdapter<Club>(context, R.layout.item_club, items) {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_club, parent, false)
@@ -383,11 +401,11 @@ class MainActivity : AppCompatActivity() {
 
             if (club.isDirty) {
                 tvState.text = "Modifié localement"
-                tvState.setTextColor(android.graphics.Color.parseColor("#E65100"))
+                tvState.setTextColor(Color.parseColor("#E65100"))
             } else if (!club.isApproved) {
-                tvState.setTextColor(android.graphics.Color.parseColor("#1976D2"))
+                tvState.setTextColor(Color.parseColor("#1976D2"))
             } else {
-                tvState.setTextColor(android.graphics.Color.parseColor("#666666"))
+                tvState.setTextColor(Color.parseColor("#666666"))
             }
             btnViewDetails.setOnClickListener {
                 val intent = Intent(this@MainActivity, DetailActivity::class.java)

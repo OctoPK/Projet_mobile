@@ -1,84 +1,97 @@
 package fr.iut.projetmobile.repository
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import fr.iut.projetmobile.database.AppDatabase
+import fr.iut.projetmobile.database.PendingActionEntity
 import fr.iut.projetmobile.model.Club
 import fr.iut.projetmobile.network.ApiClient
+import fr.iut.projetmobile.network.ClubParser
+import fr.iut.projetmobile.sync.ConnectivityObserver
+import fr.iut.projetmobile.sync.SyncManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
-/**
- * Repository : source unique de vérité.
- * - Toujours lire/écrire dans la base locale (Room).
- * - Synchroniser avec le serveur quand le réseau est disponible.
- */
 class ClubRepository(private val context: Context) {
 
-    private val dao = AppDatabase.getInstance(context).clubDao()
+    private val db = AppDatabase.getInstance(context)
+    private val clubDao = db.clubDao()
+    private val pendingActionDao = db.pendingActionDao()
 
-    // ---------------------------------------------------------- Lecture locale
+    private val syncManager = SyncManager(pendingActionDao)
+    private val connectivityObserver = ConnectivityObserver(context)
 
-    fun getAll(): List<Club> = dao.getAll()
+    fun getAll(): List<Club> = clubDao.getAll()
 
-    fun getById(id: Int): Club? = dao.getById(id)
-
-    // ---------------------------------------------------------- Écriture locale
+    fun getById(id: Int): Club? = clubDao.getById(id)
 
     /**
-     * Modifie un club localement et le marque "dirty" pour sync ultérieure.
+     * Sauvegarde en base locale et met l'action dans la file d'attente pour le serveur.
      */
     fun saveLocally(club: Club) {
-        dao.insert(club.copy(isDirty = true))
-    }
+        clubDao.insert(club)
 
-    // ---------------------------------------------------------- Synchronisation
+        val actionType = if (club.id < 0) SyncManager.ACTION_CREATE_CLUB else SyncManager.ACTION_UPDATE_CLUB
+        val jsonPayload = ClubParser.clubToJson(club)
+
+        val action = PendingActionEntity(
+            actionType = actionType,
+            clubId = club.id,
+            payload = jsonPayload
+        )
+        pendingActionDao.insert(action)
+    }
 
     /**
-     * Synchronisation complète :
-     * 1. Envoie les modifications locales (dirty) au serveur.
-     * 2. Récupère la liste à jour depuis le serveur et remplace la base locale.
-     *
-     * ⚠️ À appeler dans un thread de fond (coroutine, Thread…), jamais sur l'UI thread.
+     * Pousse la file d'attente puis récupère la nouvelle liste serveur.
+     * Retourne true si tout est synchronisé (file d'attente vide ET refresh OK).
      */
-    fun sync(): Boolean {
-        if (!isNetworkAvailable()) return false
+    suspend fun sync(): Boolean = withContext(Dispatchers.IO) {
+        if (!connectivityObserver.isOnline()) return@withContext false
 
-        // Étape 1 : push des données "dirty"
-        val dirty = dao.getDirty()
-        for (club in dirty) {
-            val ok = if (club.id < 0) {        // id négatif = créé localement
-                ApiClient.createClub(club)
-            } else {
-                ApiClient.updateClub(club)
+        // 1. On vide la file d'attente vers l'API
+        val syncActionsSuccess = syncManager.syncPendingActions()
+
+        // 2. On récupère la base serveur pour se mettre à jour
+        return@withContext try {
+            val remote = ApiClient.getClubs()
+
+            // On récupère les IDs des clubs qui ont encore des actions en attente
+            val pendingActions = pendingActionDao.getAllPendingActions()
+            val pendingClubIds = pendingActions.map { it.clubId }.toSet()
+
+            clubDao.deleteAll()
+            // On insère d'abord tout ce qui vient du serveur
+            clubDao.insertAll(remote)
+
+            // 3. On écrase/ajoute les versions locales "dirty" par-dessus
+            if (pendingActions.isNotEmpty()) {
+                for (action in pendingActions) {
+                    val payloadStr = action.payload ?: continue
+                    val payload = JSONObject(payloadStr)
+                    
+                    val club = Club(
+                        id = payload.optInt("club_id", payload.optInt("id", action.clubId)),
+                        nom = payload.optString("club_name", ""),
+                        rue = payload.optString("club_street", "").takeIf { it.isNotBlank() },
+                        ville = payload.optString("club_city", ""),
+                        codePostal = payload.optString("club_postal_code", "").takeIf { it.isNotBlank() },
+                        isApproved = payload.optBoolean("is_approved", false),
+                        memberCount = payload.optInt("member_count", 0),
+                        isDirty = true
+                    )
+                    clubDao.insert(club)
+                }
             }
-            if (ok) dao.insert(club.copy(isDirty = false))
+
+            // Le succès global dépend du fait que la file d'attente ait pu être vidée
+            syncActionsSuccess
+        } catch (e: Exception) {
+            android.util.Log.e("ClubRepository", "Sync error during fetch: ${e.message}")
+            false
         }
-
-        // Étape 2 : pull de la liste complète
-        // Lance une exception si l'API est inaccessible
-        val remote = ApiClient.getClubs()
-
-        // On sauvegarde les enregistrements qui n'ont pas pu être synchronisés pour ne pas les perdre
-        val unpushedDirty = dao.getDirty()
-
-        // Si la récupération réussit, on met à jour la base locale
-        dao.deleteAll()
-        dao.insertAll(remote)
-
-        // Réinsère les clubs modifiés localement pour les préserver
-        for (dirtyClub in unpushedDirty) {
-            dao.insert(dirtyClub)
-        }
-
-        return true
     }
 
-    // ---------------------------------------------------------- Réseau
-
-    private fun isNetworkAvailable(): Boolean {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
+    // On expose l'observeur pour l'écouter dans le ViewModel/UI
+    fun getNetworkObserver() = connectivityObserver.observe()
 }

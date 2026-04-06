@@ -6,10 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import fr.iut.projetmobile.model.Club
 
-@Database(entities = [Club::class], version = 3, exportSchema = false)
+// Attention : on augmente la version de la base à 5 puisqu'on ajoute la colonne is_dirty à Club
+@Database(entities = [Club::class, PendingActionEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun clubDao(): ClubDao
+    abstract fun pendingActionDao(): PendingActionDao // Ajout du DAO
 
     companion object {
         @Volatile
@@ -22,8 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "projetmobile.db"
                 )
-                .fallbackToDestructiveMigration()
-                .build().also { INSTANCE = it }
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
         }
     }
