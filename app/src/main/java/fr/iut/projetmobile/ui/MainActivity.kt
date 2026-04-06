@@ -156,7 +156,24 @@ class MainActivity : AppCompatActivity() {
                             true
                         }
                         2 -> {
-                            Toast.makeText(this, getString(R.string.menu_my_club_coming_soon), Toast.LENGTH_SHORT).show()
+                            val userEmail = prefs.getString(PREF_USER_EMAIL, "") ?: ""
+                            if (userEmail.isNotEmpty()) {
+                                Toast.makeText(this@MainActivity, "Recherche de votre club...", Toast.LENGTH_SHORT).show()
+                                thread {
+                                    val clubId = fr.iut.projetmobile.network.ApiClient.findClubIdForEmail(userEmail)
+                                    runOnUiThread {
+                                        if (clubId != null && clubId != -1) {
+                                            val detailIntent = Intent(this@MainActivity, DetailActivity::class.java)
+                                            detailIntent.putExtra(DetailActivity.EXTRA_CLUB_ID, clubId)
+                                            detailLauncher.launch(detailIntent)
+                                        } else {
+                                            Toast.makeText(this@MainActivity, "Vous n'êtes membre d'aucun club.", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(this@MainActivity, "Email inconnu, veuillez vous reconnecter.", Toast.LENGTH_SHORT).show()
+                            }
                             true
                         }
                         3 -> {

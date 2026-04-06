@@ -40,6 +40,27 @@ object ApiClient {
         }
     }
 
+    /**
+     * Cherche l'ID du club pour un email donné.
+     * Retourne null si introuvable ou en cas d'erreur.
+     */
+    fun findClubIdForEmail(email: String): Int? {
+        val connection = openConnection("$BASE_URL/clubs", "GET") ?: return null
+        return try {
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val body = connection.inputStream.bufferedReader().readText()
+                ClubParser.extractClubIdForEmail(body, email)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     // ----------------------------------------------------------------- AUTH
     /**
      * Authentification de l'utilisateur (POST /api/login).

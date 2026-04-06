@@ -6,8 +6,7 @@ import org.json.JSONObject
 
 object ClubParser {
 
-    fun parseClubList(jsonRaw: String): List<Club> {
-        val clubsList = mutableListOf<Club>()
+    private fun getClubsArray(jsonRaw: String): JSONArray {
         var json = jsonRaw.trim()
         if (json.startsWith("\uFEFF")) {
             json = json.substring(1).trim()
@@ -17,7 +16,7 @@ object ClubParser {
             throw Exception("API returned a blank body")
         }
 
-        val array: JSONArray = try {
+        return try {
             JSONArray(json)
         } catch (e: Exception) {
             val root = JSONObject(json)
@@ -32,7 +31,6 @@ object ClubParser {
                     val dataNode = root.get("data")
                     when {
                         dataNode is JSONArray -> dataNode
-                        // Réponse paginée Laravel : { "data": { "current_page": 1, "data": [...], ... } }
                         dataNode is JSONObject && dataNode.has("data") -> {
                             val inner = dataNode.get("data")
                             if (inner is JSONArray) inner
@@ -49,6 +47,11 @@ object ClubParser {
                 }
             }
         }
+    }
+
+    fun parseClubList(jsonRaw: String): List<Club> {
+        val clubsList = mutableListOf<Club>()
+        val array = getClubsArray(jsonRaw)
 
         for (i in 0 until array.length()) {
             val element = array.getJSONObject(i)
@@ -56,6 +59,28 @@ object ClubParser {
         }
         android.util.Log.d("ClubParser", "Parsed \${clubsList.size} clubs successfully.")
         return clubsList
+    }
+
+    fun extractClubIdForEmail(jsonRaw: String, email: String): Int? {
+        try {
+            val array = getClubsArray(jsonRaw)
+            for (i in 0 until array.length()) {
+                val clubObj = array.getJSONObject(i)
+                val members = clubObj.optJSONArray("members")
+                if (members != null) {
+                    for (j in 0 until members.length()) {
+                        val member = members.getJSONObject(j)
+                        val memberEmail = member.optString("email", "")
+                        if (memberEmail.equals(email, ignoreCase = true)) {
+                            return clubObj.optInt("club_id", clubObj.optInt("id", -1))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun parseClub(obj: JSONObject) = Club(
